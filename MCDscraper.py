@@ -27,7 +27,7 @@ def scrape(lock, index):
         options.add_argument('--disable-gpu')   
         options.add_argument("--no-sandbox")   
         options.add_argument("--window-size=1920,1080")   
-        options.add_argument('--disable-dev-shm-usage') '''
+        options.add_argument('--disable-dev-shm-usage')'''
         #driver = webdriver.Chrome(options=options)
 
         driver = webdriver.Chrome()
@@ -78,17 +78,12 @@ parentDriver.get("https://www.mcdonalds.com/us/en-us/about-our-food/nutrition-ca
 #This grabs all the categories on the page
 categories = parentDriver.find_elements_by_class_name('mcd-nutrition-calculator__category-item')
 
-#Grab number of processes
+#Close parent
+parentDriver.close()
 
 #Creating lock for multiprocessing
 lock = Lock()
 #Load up n'th number of processes for scraping
 for i in range(len(categories)):
-        Process(target=scrape, args=(lock, i).start()
+        Process(target=scrape, args=(lock, i)).start()
         #Closes processes after done
-
-parentDriver.close()
-
-
-
-
