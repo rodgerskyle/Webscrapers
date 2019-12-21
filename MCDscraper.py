@@ -3,6 +3,7 @@ from bs4 import BeautifulSoup
 
 #Multiprocessing component
 from multiprocessing import Process, Lock
+import copy
 
 import pandas as pd
 import os
@@ -17,23 +18,25 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 import time
 
-def scrape(lock, category):
+def scrape(lock, index):
     try:
         #driver = webdriver.Firefox()
-        options = Options()
-        options.add_argument('--no-sandbox')
-        driver = webdriver.Chrome(options=options)
-        #driver = webdriver.Chrome()
+        #options = Options()
+        '''options.add_argument('--headless')   
+        options.add_argument('--disable-extensions')   
+        options.add_argument('--disable-gpu')   
+        options.add_argument("--no-sandbox")   
+        options.add_argument("--window-size=1920,1080")   
+        options.add_argument('--disable-dev-shm-usage') '''
+        #driver = webdriver.Chrome(options=options)
+
+        driver = webdriver.Chrome()
         driver.get("https://www.mcdonalds.com/us/en-us/about-our-food/nutrition-calculator.html")
         #Grabs button for each category then will press it
-        #button = i.find_element_by_class_name("btn-category-nav")
         time.sleep(6)
-
-        button = driver.find_element_by_class_name('btn-category-nav')
-#        button = category
-        driver.execute_script("arguments[0].click();", button)
-        #driver.execute_script("arguments[0].click();", category)
-        #time.sleep(6)
+        button = driver.find_elements_by_class_name('btn-category-nav')
+        driver.execute_script("arguments[0].click()", button[index])
+        time.sleep(6)
         #Parses the page to just text
         content = driver.page_source
         soup = BeautifulSoup(content, "html.parser")
@@ -49,7 +52,6 @@ def scrape(lock, category):
             #Outputs scraped information to the file
             lock.acquire()
             f = open("output.txt", "a")
-            print(name + ", " + calorie + ",\n")
             f.write(name + ", " + calorie + ",\n")
             lock.release()
         #Find back button and click that
@@ -69,27 +71,21 @@ try:
     os.remove("output.txt")
 except Exception as e:
     print(e)
-#f = open("output.txt", "a")
-#parentDriver = webdriver.Chrome(chrome_options=options)
 parentDriver = webdriver.Chrome()
 
 parentDriver.get("https://www.mcdonalds.com/us/en-us/about-our-food/nutrition-calculator.html")
 
 #This grabs all the categories on the page
-#categories = driver.find_elements_by_class_name('mcd-nutrition-calculator__category-item')
-categories = parentDriver.find_elements_by_class_name('btn-category-nav')
+categories = parentDriver.find_elements_by_class_name('mcd-nutrition-calculator__category-item')
 
 #Grab number of processes
-#processes = len(categories)
 
+#Creating lock for multiprocessing
 lock = Lock()
 #Load up n'th number of processes for scraping
-for category in categories:
-        Process(target=scrape, args=(lock, category)).start()
-        break
+for i in range(len(categories)):
+        Process(target=scrape, args=(lock, i).start()
         #Closes processes after done
-
-#for i in categories:
 
 parentDriver.close()
 
