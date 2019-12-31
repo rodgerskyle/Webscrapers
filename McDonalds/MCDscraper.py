@@ -45,38 +45,70 @@ def scrape(lock, index):
         for i in range(len(items)):
             driver.execute_script("arguments[0].click()", items[i])
             time.sleep(6)
-            #Parses the page to just text
-            #content = driver.page_source
-            #soup = BeautifulSoup(content, "html.parser")
+            #Check if item has sizes
+            sizes = True
+            sizeChoices = None
+            try:
+                sizeChoices = driver.find_elements_by_class_name("ncselect")
+            except Exception as f:
+                print(f)
+                sizes = False
             #Grab item info and then refresh page and repeat stuff above
-            stats = driver.find_element_by_class_name('nutrition-calculator-alter')
-            page = stats.find_elements_by_class_name('ng-binding')
-            #Title
-            #title = soup.findAll('span', attrs={'class': 'prod-name ng-binding'}).text.strip()
-            title = driver.find_element_by_class_name('prod-name')
-            title = title.text.strip()
-            title = title.replace('®', '')
-            title = title.replace('™', '')
-            print(title)
-            #Fat
-            #title = soup.findAll('span', attrs={'class': 'prod-name ng-binding'}).text.strip()
-            fat = page[1]
-            fat = fat.text.strip()
-            print(fat)
-            #Sodium
-            sodium = page[4]
-            sodium = sodium.text.strip()
-            print(sodium)
-            #Carbs
-            carbs = page[6]
-            carbs = carbs.text.strip()
-            print(carbs)
-            break
-            #Fiber
-            #Sugar
-            #Protein
-            #Calories
-            #Image
+            #Keep repeating item details for size
+            repeat = True
+            #Sizes with index attached
+            sizeIndex = 0
+            while (repeat):
+                stats = driver.find_element_by_class_name('nutrition-calculator-alter')
+                page = stats.find_elements_by_class_name('ng-binding')
+                #Title
+                title = driver.find_element_by_class_name('prod-name')
+                title = title.text.strip()
+                title = title.replace('®', '')
+                title = title.replace('™', '')
+                if (sizes):
+                    #Grabs size name from the a tag
+                    size = sizeChoices[sizeIndex].find_element_by_class_name('ng-binding').text.strip()
+                    title = title + " (" + size + ")"
+                    sizeIndex+=1
+                    if sizeIndex >= len(sizeChoices):
+                        repeat = False
+                    else:
+                        #Clicks onto the next size for the next loop
+                        driver.execute_script("arguments[0].click()", sizeChoices[sizeIndex].find_element_by_class_name('ng-binding'))
+                        time.sleep(2)
+                else:
+                    repeat = False
+                print(title)
+                #Fat
+                fat = page[5]
+                fat = fat.text.strip()
+                print("Fat " + fat)
+                #Sodium
+                sodium = page[34]
+                sodium = sodium.text.strip()
+                print("Sodium " + sodium)
+                #Carbs
+                carbs = page[9]
+                carbs = carbs.text.strip()
+                print("Carbs " + carbs)
+                #Fiber
+                fiber = page[19]
+                fiber = fiber.text.strip()
+                print("Fiber " + fiber)
+                #Sugar
+                sugar = page[26]
+                sugar = sugar.text.strip()
+                print("Sugar " + sugar)
+                #Protein
+                protein = page[13]
+                protein = protein.text.strip()
+                print("Protein " + protein)
+                #Calories
+                calories = page[1]
+                calories = calories.text.strip()
+                print("Calories " + calories)
+                #Image
 
         #Old way just to find item name and calories
         '''
