@@ -8,6 +8,9 @@ import copy
 import pandas as pd
 import os
 
+#Downloading images from website
+import urllib
+
 #Options for chrome
 from selenium.webdriver.chrome.options import Options
 
@@ -42,6 +45,10 @@ def scrape(lock, index):
         #Find number of items and will re-loop based on how many there are
         listOfItems = driver.find_element_by_class_name('mcd-nutrition-calculator__product-selection-container')
         items = listOfItems.find_elements_by_class_name('btn-category-nav')
+        #Buffer amount to basically pad existing items
+        buffer = 0
+        #Grab global curIndex
+        global curIndex
         for i in range(len(items)):
             driver.execute_script("arguments[0].click()", items[i])
             time.sleep(6)
@@ -56,6 +63,17 @@ def scrape(lock, index):
             #Grab item info and then refresh page and repeat stuff above
             #Keep repeating item details for size
             repeat = True
+
+            lock.acquire()
+            #Grab image and save the filepath
+            imgTmp = driver.find_element_by_class_name("prod-image")
+            img = imgTmp.find_element_by_tag_name("img")
+            src = img.get_attribute('src')
+            imgpath = "McDonalds/" + curIndex + "k.jpg"
+            urllib.request.urlretrieve(src, imgpath)
+            #Increment curIndex
+            curIndex+=1
+            lock.release()
             #Sizes with index attached
             sizeIndex = 0
             while (repeat):
@@ -68,10 +86,13 @@ def scrape(lock, index):
                 title = title.replace('™', '')
                 if (sizes):
                     #Grabs size name from the a tag
-                    size = sizeChoices[sizeIndex].find_element_by_class_name('ng-binding').text.strip()
+                    dropdown = driver.find_element_by_class_name('dropdown-toggle')
+                    size = dropdown.find_element_by_class_name('ng-binding').text
+                    #print("Size Name: " + size)
                     title = title + " (" + size + ")"
                     sizeIndex+=1
-                    if sizeIndex >= len(sizeChoices):
+                    time.sleep(1)
+                    if sizeIndex+buffer >= len(sizeChoices):
                         repeat = False
                     else:
                         #Clicks onto the next size for the next loop
@@ -79,36 +100,50 @@ def scrape(lock, index):
                         time.sleep(2)
                 else:
                     repeat = False
-                print(title)
+                #print(title)
                 #Fat
                 fat = page[5]
                 fat = fat.text.strip()
-                print("Fat " + fat)
+                #print("Fat " + fat)
                 #Sodium
                 sodium = page[34]
                 sodium = sodium.text.strip()
-                print("Sodium " + sodium)
+                #print("Sodium " + sodium)
                 #Carbs
                 carbs = page[9]
                 carbs = carbs.text.strip()
-                print("Carbs " + carbs)
+                #print("Carbs " + carbs)
                 #Fiber
                 fiber = page[19]
                 fiber = fiber.text.strip()
-                print("Fiber " + fiber)
+                #print("Fiber " + fiber)
                 #Sugar
                 sugar = page[26]
                 sugar = sugar.text.strip()
-                print("Sugar " + sugar)
+                #print("Sugar " + sugar)
                 #Protein
                 protein = page[13]
                 protein = protein.text.strip()
-                print("Protein " + protein)
+                #print("Protein " + protein)
                 #Calories
                 calories = page[1]
                 calories = calories.text.strip()
-                print("Calories " + calories)
-                #Image
+                #print("Calories " + calories)
+                #Output to file
+                lock.acquire()
+                f = open("output.txt", "a")
+                f.write(title + ", " + fat + ", ")
+                f.write(sodium + ", " + carbs + ", ")
+                f.write(fiber + ", " + sugar + ", ")
+                f.write(protein + ", " + calories + ", ")
+                f.write(imgpath + ",\n")
+                f.close()
+                lock.release()
+            #After done with item; exclude it
+            excludes = driver.find_elements_by_class_name("custom-checkmark")
+            driver.execute_script("arguments[0].click()", excludes[0])
+            buffer += sizeIndex
+            sizeIndex = 0
 
         #Old way just to find item name and calories
         '''
@@ -154,6 +189,9 @@ categories = parentDriver.find_elements_by_class_name('mcd-nutrition-calculator_
 
 #Close parent
 parentDriver.close()
+
+#Create global index for img paths
+curIndex = 1
 
 #Creating lock for multiprocessing
 lock = Lock()
