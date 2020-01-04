@@ -69,7 +69,7 @@ def scrape(lock, index):
             imgTmp = driver.find_element_by_class_name("prod-image")
             img = imgTmp.find_element_by_tag_name("img")
             src = img.get_attribute('src')
-            imgpath = "McDonalds/" + curIndex + "k.jpg"
+            imgpath = "McDonalds/" + str(curIndex) + "k.jpg"
             urllib.request.urlretrieve(src, imgpath)
             #Increment curIndex
             curIndex+=1
@@ -144,30 +144,6 @@ def scrape(lock, index):
             driver.execute_script("arguments[0].click()", excludes[0])
             buffer += sizeIndex
             sizeIndex = 0
-
-        #Old way just to find item name and calories
-        '''
-        itemNames = soup.findAll('span', attrs={'class': 'name text-center ng-binding'})
-        itemCalories = soup.findAll('span', attrs={'class': 'calory-count text-center ng-binding'})
-        for names, calories in zip(itemNames, itemCalories):
-            #Finds the items' calories
-            name=names.text.strip()
-            #strips name string of bad characters
-            name=name.replace('®', '')
-            name=name.replace('™', '')
-            calorie=calories.text.strip()
-            #Outputs scraped information to the file
-            lock.acquire()
-            f = open("output.txt", "a")
-            f.write(name + ", " + calorie + ",\n")
-            f.close()
-            lock.release()
-        '''
-        #Find back button and click that
-        #backbutton = i.find_element_by_class_name("btn-back")
-        #time.sleep(2)
-        #driver.execute_script("arguments[0].click();", backbutton)
-        #time.sleep(2)
         driver.close()
     except Exception as e:
         print(e)
