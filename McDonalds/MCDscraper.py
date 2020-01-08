@@ -104,8 +104,8 @@ def scrape(lock, index):
                     tempFinder = driver.find_element_by_class_name("product-size-wrapper")
                     sizeChoices = tempFinder.find_elements_by_class_name("ng-scope")
                     #Grabs size name from the span tag
-                    size = soup.find('span', attrs={'class':'product-size-text'}).text.strip()
-                    title = title + " (" + size + ")"
+                    size = soup.findAll('span', attrs={'class':'product-size-text'})
+                    title = title + " (" + size[sizeIndex].text.strip()+ ")"
                     time.sleep(1)
                     if sizeIndex >= len(sizeChoices):
                         repeat = False
