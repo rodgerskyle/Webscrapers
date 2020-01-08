@@ -2,7 +2,7 @@ from selenium import webdriver
 from bs4 import BeautifulSoup
 
 #Multiprocessing component
-from multiprocessing import Process, Lock
+from multiprocessing import Process, Lock, Value
 import copy
 
 import pandas as pd
@@ -21,17 +21,16 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 import time
 
-def scrape(lock, index):
+def scrape(lock, index, curIndex):
     try:
-        print("hey")
         #driver = webdriver.Firefox()
         options = Options()
-        '''options.add_argument('--headless')   
+        options.add_argument('--headless')   
         options.add_argument('--disable-extensions')   
         options.add_argument('--disable-gpu')   
         options.add_argument("--no-sandbox")   
         options.add_argument("--window-size=1920,1080")   
-        options.add_argument('--disable-dev-shm-usage') '''
+        options.add_argument('--disable-dev-shm-usage')
         driver = webdriver.Chrome(options=options)
 
         #driver = webdriver.Chrome()
@@ -39,7 +38,6 @@ def scrape(lock, index):
         driver.get("https://www.mcdonalds.com/us/en-us/full-menu.html")
         #Grabs button for each category then will press it
         time.sleep(6)
-        #button = driver.find_elements_by_class_name('btn-category-nav')
         button = driver.find_elements_by_class_name('category-link')
         #Name of Category
         category = button[index].text.lower()
@@ -50,13 +48,8 @@ def scrape(lock, index):
 
         #Page with all items on it
         #Find number of items and will re-loop based on how many there are
-        #listOfItems = driver.find_element_by_class_name('mcd-nutrition-calculator__product-selection-container')
-        #items = listOfItems.find_elements_by_class_name('btn-category-nav')
         items = driver.find_elements_by_class_name('categories-item-link')
-        #Buffer amount to basically pad existing items
-        #buffer = 0
         #Grab global curIndex
-        global curIndex
         for i in range(len(items)):
             items = driver.find_elements_by_class_name('categories-item-link')
             driver.execute_script("arguments[0].click()", items[i])
@@ -94,7 +87,6 @@ def scrape(lock, index):
                 stats = driver.find_element_by_class_name('mcd-panel')
                 page = stats.find_elements_by_class_name('ng-binding')
                 #Title
-                #title = driver.find_element_by_class_name('typo-h1')
                 title = soup.find('h1', attrs={'class':'heading'}).text.strip()
                 title = title.replace('®', '')
                 title = title.replace('™', '')
@@ -117,14 +109,12 @@ def scrape(lock, index):
                 else:
                     repeat = False
                 #Grab pages new information just in case
-                #stats = driver.find_element_by_class_name('mcd-panel')
-                #page = stats.find_elements_by_class_name('sr-only')
                 content = driver.page_source
                 soup = BeautifulSoup(content, "html.parser")
                 page = soup.findAll('span', attrs={'class':'sr-only'})
                 #Description
-                #description = driver.find_element_by_class_name("product-detail__description").text.strip()
                 description = soup.find('p', attrs={'class':'product-detail__description'}).text.strip()
+                description = description.replace(r'\r','')
                 description = '"' + description + '"'
                 #Meal
                 if (category.find("breakfast")):
@@ -140,31 +130,24 @@ def scrape(lock, index):
                 #Fat
                 fat = page[4]
                 fat = fat.text.strip().split(None, 1)[0]
-                #print("Fat " + fat)
                 #Sodium
                 sodium = page[18]
                 sodium = sodium.text.strip().split(None, 1)[0]
-                #print("Sodium " + sodium)
                 #Carbs
                 carbs = page[6]
                 carbs = carbs.text.strip().split(None, 1)[0]
-                #print("Carbs " + carbs)
                 #Fiber
                 fiber = page[11]
                 fiber = fiber.text.strip().split(None, 1)[0]
-                #print("Fiber " + fiber)
                 #Sugar
                 sugar = page[25]
                 sugar = sugar.text.strip().split(None, 1)[0]
-                #print("Sugar " + sugar)
                 #Protein
                 protein = page[8]
                 protein = protein.text.strip().split(None, 1)[0]
-                #print("Protein " + protein)
                 #Calories
                 calories = page[0]
                 calories = calories.text.strip().split(None, 1)[0]
-                #print("Calories " + calories)
                 #Output to file
                 lock.acquire()
                 f = open("output.txt", "a")
@@ -176,13 +159,6 @@ def scrape(lock, index):
                 f.write(imgpath + ",\n")
                 f.close()
                 lock.release()
-            #After done with item; exclude it
-            #excludes = driver.find_elements_by_class_name("custom-checkmark")
-            #driver.execute_script("arguments[0].click()", excludes[0])
-            #buffer += sizeIndex
-            #driver.back()
-            #backScript = "window.history.go(" + str(sizeIndex*-1) + ")"
-            #driver.execute_script(backScript)
             driver.get(pageLink)
             sizeIndex = 0
             time.sleep(2)
@@ -205,7 +181,6 @@ parentDriver = webdriver.Chrome()
 parentDriver.get("https://www.mcdonalds.com/us/en-us/full-menu.html")
 
 #This grabs all the categories on the page
-#categories = parentDriver.find_elements_by_class_name('mcd-nutrition-calculator__category-item')
 categories = parentDriver.find_elements_by_class_name('category-link')
 
 #Grabs the category names of each category
@@ -217,7 +192,7 @@ categoryName = soup.findAll('span', attrs={'class':'category-title'})
 parentDriver.close()
 
 #Create global index for img paths
-curIndex = 1
+curIndex = Value('d', 1)
 
 #Creating lock for multiprocessing
 lock = Lock()
@@ -226,5 +201,7 @@ lock = Lock()
 for i in range(len(categories)):
     tempS = categoryName[i].text.strip().lower()
     if (i >= 2 and tempS.find("meal") is -1):
-        Process(target=scrape, args=(lock, i)).start()
+        p = Process(target=scrape, args=(lock, i, curIndex))
+        p.start()
+        p.join()
 
