@@ -34,7 +34,6 @@ def scrape(lock, index, curIndex):
         driver = webdriver.Chrome(options=options)
 
         #driver = webdriver.Chrome()
-        #driver.get("https://www.mcdonalds.com/us/en-us/about-our-food/nutrition-calculator.html")
         driver.get("https://www.mcdonalds.com/us/en-us/full-menu.html")
         #Grabs button for each category then will press it
         time.sleep(6)
@@ -74,10 +73,10 @@ def scrape(lock, index, curIndex):
             img = imgTmp.find_element_by_tag_name("img")
             src = img.get_attribute('srcset')
             src = "https://www.mcdonalds.com" + src
-            imgpath = "McDonalds/" + str(curIndex) + "k.jpg"
+            imgpath = "McDonalds/" + str(int(float(curIndex.value))) + "k.jpg"
             urllib.request.urlretrieve(src, imgpath)
             #Increment curIndex
-            curIndex+=1
+            curIndex.value = curIndex.value + 1
             lock.release()
             #Sizes with index attached
             sizeIndex = 0
@@ -114,8 +113,9 @@ def scrape(lock, index, curIndex):
                 page = soup.findAll('span', attrs={'class':'sr-only'})
                 #Description
                 description = soup.find('p', attrs={'class':'product-detail__description'}).text.strip()
-                description = description.replace(r'\r','')
-                description = '"' + description + '"'
+                description = description.replace('\r','').replace('\n','')
+                description = '|' + description + '|'
+                print(description)
                 #Meal
                 if (category.find("breakfast")):
                     meal = "Breakfast"
@@ -203,5 +203,4 @@ for i in range(len(categories)):
     if (i >= 2 and tempS.find("meal") is -1):
         p = Process(target=scrape, args=(lock, i, curIndex))
         p.start()
-        p.join()
-
+        #p.join()
